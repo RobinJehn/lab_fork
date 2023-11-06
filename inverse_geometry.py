@@ -26,10 +26,13 @@ def computeqgrasppose(robot: RobotWrapper, qcurrent, cube: RobotWrapper, cubetar
     RIGHT_HAND_ID = robot.model.getFrameId(RIGHT_HAND)
     setcubeplacement(robot, cube, cubetarget)
     cube_LH = getcubeplacement(cube, LEFT_HOOK)
+    cube_LH = pin.SE3(cube_LH + np.array([[0,0,0,0],[0,0,0,0],[0,0,0,7*EPSILON],[0,0,0,0]]))
     cube_RH = getcubeplacement(cube, RIGHT_HOOK)
+    cube_RH = pin.SE3(cube_RH + np.array([[0,0,0,0],[0,0,0,0],[0,0,0,7*EPSILON],[0,0,0,0]]))
+
     q = qcurrent.copy()
     # herr = []
-    for _ in range(1000): 
+    for _ in range(2000): 
         # Run the algorithms that outputs values in robot.data
         pin.framesForwardKinematics(robot.model,robot.data,q)
         pin.computeJointJacobians(robot.model,robot.data,q)
@@ -51,9 +54,11 @@ def computeqgrasppose(robot: RobotWrapper, qcurrent, cube: RobotWrapper, cubetar
         q = pin.integrate(robot.model,q, vq * DT)
         # viz.display(q)
         # herr.append((left_nu, right_nu))
+        if(norm(left_nu) < EPSILON and norm(right_nu) < EPSILON):
+            break
     
-    # print(herr[-1])
-    return q, True
+    success = not collision(robot, q) and norm(left_nu) < EPSILON and norm(right_nu) < EPSILON
+    return q, success
             
 if __name__ == "__main__":
     from tools import setupwithmeshcat
@@ -67,7 +72,6 @@ if __name__ == "__main__":
     
     # updatevisuals(viz, robot, cube, q0)
     updatevisuals(viz, robot, cube, qe)
-    print(collision(robot, qe))
     
     
     

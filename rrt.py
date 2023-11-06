@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astar import AStar
 
+
 class BasicAStar(AStar):
     def __init__(self, tree: Tree):
         self.tree = tree
@@ -14,42 +15,43 @@ class BasicAStar(AStar):
 
     def distance_between(self, n1: Node, n2: Node) -> float:
         return n1.distance(n2)
-            
+
     def heuristic_cost_estimate(self, current: Node, goal: Node) -> float:
         return current.distance(goal)
-    
+
     def is_goal_reached(self, current: Node, goal: Node) -> bool:
         return current == goal
 
+
 class Node:
-    def __init__(self, position: np.ndarray, parent: Node = None, q = None):
+    def __init__(self, position: np.ndarray, parent: Node = None, q=None):
         self.position = position
         self.parent = parent
         self.q = q
 
     def distance(self, other):
         return np.linalg.norm(self.position - other.position)
-    
+
     def step(self, target: Node, epsilon, collision_f: callable) -> Node:
         if self.distance(target) < epsilon:
             new_node = target
         else:
             dir = target.position - self.position
-            dir = dir / np.linalg.norm(dir) * epsilon # Make dir length epsilon
+            dir = dir / np.linalg.norm(dir) * epsilon  # Make dir length epsilon
             new_pos = self.position + dir
             new_node = Node(new_pos, self)
-        
+
         if collision_f(new_node):
             return None
         else:
             return new_node
-            
+
     def __hash__(self):
         return hash(self.position.tobytes())
-    
+
     def __eq__(self, other) -> bool:
         return np.all(self.position == other.position)
-    
+
     def __str__(self):
         return str(self.position)
 
@@ -58,7 +60,7 @@ class Tree:
     def __init__(self):
         self.nodes = []
         self.edges = dict()
-    
+
     def add_node(self, node: Node) -> None:
         self.nodes.append(node)
 
@@ -73,7 +75,7 @@ class Tree:
             self.edges[v].append(u)
         else:
             self.edges[v] = [u]
-    
+
     def nearestNeighbor(self, q: Node) -> Node:
         min_dist = np.inf
         nearest = None
@@ -89,7 +91,11 @@ class Tree:
         ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2])
         for key, value in self.edges.items():
             for v in value:
-                ax.plot([key.position[0], v.position[0]], [key.position[1], v.position[1]], [key.position[2], v.position[2]])
+                ax.plot(
+                    [key.position[0], v.position[0]],
+                    [key.position[1], v.position[1]],
+                    [key.position[2], v.position[2]],
+                )
         if show:
             plt.show()
 
@@ -112,7 +118,6 @@ class Tree:
         return tree
 
 
-
 class RRT_CONNECT:
     def __init__(self, start: Node, goal: Node):
         self.start = start
@@ -123,8 +128,8 @@ class RRT_CONNECT:
         self.tree_a.add_node(self.start)
         self.tree_b = Tree()
         self.tree_b.add_node(self.goal)
-        self.ax = plt.figure().add_subplot(projection='3d')
-    
+        self.ax = plt.figure().add_subplot(projection="3d")
+
     @staticmethod
     def extend(tree: Tree, q: Node, collision_f: callable, step_size: float = 0.1):
         q_near = tree.nearestNeighbor(q)
@@ -148,7 +153,14 @@ class RRT_CONNECT:
             _, s = RRT_CONNECT.extend(tree, q, collision_f, step_size)
         return s
 
-    def plan(self, collision_f: callable, step_size: float = 0.1, max_iter: int = 1000, rand_f: callable = None, vis = False) -> list[Node]:
+    def plan(
+        self,
+        collision_f: callable,
+        step_size: float = 0.1,
+        max_iter: int = 1000,
+        rand_f: callable = None,
+        vis=False,
+    ) -> list[Node]:
         if vis:
             plt.ion()
             plt.show()
@@ -170,14 +182,14 @@ class RRT_CONNECT:
             if k > 1 and k % 10 == 0:
                 if vis:
                     self.plot()
-        return self.path          
+        return self.path
 
     def plot(self, vis_path: bool = False) -> None:
         self.tree_a.plot(self.ax)
         self.tree_b.plot(self.ax)
         if vis_path:
             path = np.array(list(map(lambda n: n.position, self.path)))
-            self.ax.plot(path[:, 0], path[:, 1], path[:, 2], 'ro-')
+            self.ax.plot(path[:, 0], path[:, 1], path[:, 2], "ro-")
         print(len(self.tree_a.nodes))
         print(len(self.tree_b.nodes))
         plt.draw()
@@ -186,10 +198,14 @@ class RRT_CONNECT:
 
 def collission_f(node: Node) -> bool:
     position = node.position
-    return position[0] > 4.5 and position[0] < 5.5 and position[1] < 1 and position[1] > -1
+    return (
+        position[0] > 4.5 and position[0] < 5.5 and position[1] < 1 and position[1] > -1
+    )
+
 
 def rand_f(extend_start: bool) -> Node:
     return Node(np.array([np.random.uniform(4, 6), np.random.uniform(-2, 2)]))
+
 
 if __name__ == "__main__":
     start = Node(np.array([0, 0]))

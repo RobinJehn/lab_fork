@@ -29,7 +29,7 @@ class Simulation_base:
             }
             robotConfigs (dict) = {
                 "robotPath"             : str           -- path_to_robot_urdf_file
-                "robotStartPos"         : [0, 0, 0.85]  -- starting position of the robot 
+                "robotStartPos"         : [0, 0, 0.85]  -- starting position of the robot
                 "robotStartOrientation" : [0,0,0,1]     -- starting orientation of the robot
                 "fixedBase"             : False         -- makes the base of the robot floating/fixed
                 "colored"               : False         -- makes the robot coloured
@@ -43,14 +43,14 @@ class Simulation_base:
         self.pybullet_data = self.pybulletConfigs["pybullet_extra_data"]
         self.controlFrequency = pybulletConfigs["controlFrequency"]
         self.updateFrequency = pybulletConfigs["updateFrequency"]
-        self.dt = 1. / self.controlFrequency
+        self.dt = 1.0 / self.controlFrequency
 
         self.cameraPresets = {
             "cameraPreset1": (1.8, 122.0, -27.6, (-0.03, 0.03, 0.83)),
             "cameraPreset2": (1.2, 172.0, 4.0, (0.26, -0.21, 1.14)),
             "cameraPreset3": (1.4, 49.2, -6.4, (0.23, 0.48, 0.88)),
             "cameraPreset4": (1.2, 126.4, -12.8, (-0.12, -0.01, 0.99)),
-            "cameraPreset5": (1.2, 90, -22.8, (-0.12, -0.01, 0.99))
+            "cameraPreset5": (1.2, 90, -22.8, (-0.12, -0.01, 0.99)),
         }
 
         ### Simulation setup
@@ -64,34 +64,32 @@ class Simulation_base:
         if not self.pybulletConfigs["panels"]:
             self.p.configureDebugVisualizer(self.p.COV_ENABLE_GUI, 0)
             self.p.configureDebugVisualizer(
-                self.p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
-            self.p.configureDebugVisualizer(
-                self.p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
-            self.p.configureDebugVisualizer(
-                self.p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+                self.p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0
+            )
+            self.p.configureDebugVisualizer(self.p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+            self.p.configureDebugVisualizer(self.p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
         self.p.configureDebugVisualizer(self.p.COV_ENABLE_MOUSE_PICKING, 1)
         if "cameraPreset" in self.pybulletConfigs["cameraSettings"]:
             # try to resolve camera config as a string
             try:
                 self.p.resetDebugVisualizerCamera(
-                    *self.cameraPresets[self.pybulletConfigs["cameraSettings"]])
+                    *self.cameraPresets[self.pybulletConfigs["cameraSettings"]]
+                )
             except:
-                self.p.resetDebugVisualizerCamera(
-                    *self.cameraPresets["cameraPreset1"])
+                self.p.resetDebugVisualizerCamera(*self.cameraPresets["cameraPreset1"])
         else:
             # try to resolve camera config as a camera config
             try:
                 self.p.resetDebugVisualizerCamera(
-                    *self.pybulletConfigs["cameraSettings"])
+                    *self.pybulletConfigs["cameraSettings"]
+                )
             except:
-                self.p.resetDebugVisualizerCamera(
-                    *self.cameraPresets["cameraPreset1"])
+                self.p.resetDebugVisualizerCamera(*self.cameraPresets["cameraPreset1"])
 
         # Engine parameters
         self.p.setRealTimeSimulation(pybulletConfigs["realTime"])
         self.p.setGravity(0, 0, pybulletConfigs["gravity"])
         self.p.setPhysicsEngineParameter(fixedTimeStep=self.dt)
-
 
         ### Loading objects/robots
         # add directories
@@ -115,7 +113,6 @@ class Simulation_base:
             #                       + self.p.URDF_USE_INERTIA_FROM_FILE),
         )
 
-
         # Setting frictions parameters to default ones
         self.setFloorFrictions()
 
@@ -136,11 +133,23 @@ class Simulation_base:
         self.jointGravCompensation = {}
 
         self.robotLimbs = [
-            ["LARM_JOINT0", "LARM_JOINT1", "LARM_JOINT2",
-                "LARM_JOINT3", "LARM_JOINT4", "LARM_JOINT5"],
-            ["RARM_JOINT0", "RARM_JOINT1", "RARM_JOINT2",
-                "RARM_JOINT3", "RARM_JOINT4", "RARM_JOINT5"],
-            ["HEAD_JOINT0", "HEAD_JOINT1"]
+            [
+                "LARM_JOINT0",
+                "LARM_JOINT1",
+                "LARM_JOINT2",
+                "LARM_JOINT3",
+                "LARM_JOINT4",
+                "LARM_JOINT5",
+            ],
+            [
+                "RARM_JOINT0",
+                "RARM_JOINT1",
+                "RARM_JOINT2",
+                "RARM_JOINT3",
+                "RARM_JOINT4",
+                "RARM_JOINT5",
+            ],
+            ["HEAD_JOINT0", "HEAD_JOINT1"],
         ]
 
         self.colorPalettes = {
@@ -154,37 +163,35 @@ class Simulation_base:
         n = 0
         for k in range(self.p.getNumJoints(self.robot)):
             jointInfo = self.p.getJointInfo(self.robot, k)
-            jointName = jointInfo[1].decode('utf-8')
+            jointName = jointInfo[1].decode("utf-8")
 
-            if not jointName.endswith('_fixing') and not jointName.endswith('_passive'):
-                if '_frame' in jointName:
+            if not jointName.endswith("_fixing") and not jointName.endswith("_passive"):
+                if "_frame" in jointName:
                     self.frames[jointName] = k
                 else:
                     self.joints.append(jointName)
                     self.jointIds[jointName] = n
                     n += 1
 
-                    self.jointsInfos[jointName] = {
-                        'type': jointInfo[2]
-                    }
+                    self.jointsInfos[jointName] = {"type": jointInfo[2]}
                     if jointInfo[8] < jointInfo[9]:
-                        self.jointsInfos[jointName]['lowerLimit'] = jointInfo[8]
-                        self.jointsInfos[jointName]['upperLimit'] = jointInfo[9]
+                        self.jointsInfos[jointName]["lowerLimit"] = jointInfo[8]
+                        self.jointsInfos[jointName]["upperLimit"] = jointInfo[9]
                     else:
                         # default value
-                        self.jointsInfos[jointName]['lowerLimit'] = -2.0
+                        self.jointsInfos[jointName]["lowerLimit"] = -2.0
                         # default value
-                        self.jointsInfos[jointName]['upperLimit'] = 2.0
-                    self.jointsInfos[jointName]['restPos'] = self.getJointPos(
-                        jointName)
+                        self.jointsInfos[jointName]["upperLimit"] = 2.0
+                    self.jointsInfos[jointName]["restPos"] = self.getJointPos(jointName)
                     # default value
-                    self.jointsInfos[jointName]['jointRange'] = 2.0
+                    self.jointsInfos[jointName]["jointRange"] = 2.0
 
-                    if re.match('(base|BASE)', jointName):
+                    if re.match("(base|BASE)", jointName):
                         self.jointControllers[jointName] = "SKIP_THIS_JOINT"
                     else:
-                        self.jointControllers[jointName] = jointName + \
-                            "_position_controller"
+                        self.jointControllers[jointName] = (
+                            jointName + "_position_controller"
+                        )
                     self.jointControlType[jointName] = "velocity"
                     self.jointTorques[jointName] = 0.0
                     self.jointTargetPos[jointName] = 0.0
@@ -199,38 +206,40 @@ class Simulation_base:
         self.initialiseDebugLines()
         # Robot color scheme, modify as you wish
         self.robotColorPreset = {
-            'base_to_waist': "darkGrey",
-            'CHEST_JOINT0': "lightGrey",
-            'HEAD_JOINT0': "darkOrange",
-            'HEAD_JOINT1': "lightOrange",
-            'LARM_JOINT0': "darkOrange",
-            'LARM_JOINT1': "lightOrange",
-            'LARM_JOINT2': "darkOrange",
-            'LARM_JOINT3': "lightOrange",
-            'LARM_JOINT4': "darkOrange",
-            'LARM_JOINT5': "lightOrange",
-            'RARM_JOINT0': "darkOrange",
-            'RARM_JOINT1': "lightOrange",
-            'RARM_JOINT2': "darkOrange",
-            'RARM_JOINT3': "lightOrange",
-            'RARM_JOINT4': "darkOrange",
-            'RARM_JOINT5': "lightOrange"
+            "base_to_waist": "darkGrey",
+            "CHEST_JOINT0": "lightGrey",
+            "HEAD_JOINT0": "darkOrange",
+            "HEAD_JOINT1": "lightOrange",
+            "LARM_JOINT0": "darkOrange",
+            "LARM_JOINT1": "lightOrange",
+            "LARM_JOINT2": "darkOrange",
+            "LARM_JOINT3": "lightOrange",
+            "LARM_JOINT4": "darkOrange",
+            "LARM_JOINT5": "lightOrange",
+            "RARM_JOINT0": "darkOrange",
+            "RARM_JOINT1": "lightOrange",
+            "RARM_JOINT2": "darkOrange",
+            "RARM_JOINT3": "lightOrange",
+            "RARM_JOINT4": "darkOrange",
+            "RARM_JOINT5": "lightOrange",
         }
         # Apply colors if required
-        if robotConfigs['colored']:
+        if robotConfigs["colored"]:
             for joint in self.robotColorPreset:
                 self.p.resetVisualShapeData(
-                    self.robot, self.jointIds[joint], 
-                    rgbaColor=self.colorPalettes[self.robotColorPreset[joint]])
+                    self.robot,
+                    self.jointIds[joint],
+                    rgbaColor=self.colorPalettes[self.robotColorPreset[joint]],
+                )
 
         # Finishing up and show no of joints
-        print('[Simulation] Found '+str(len(self.jointIds))+' DOFs')
+        print("[Simulation] Found " + str(len(self.jointIds)) + " DOFs")
 
     ########## Destructor ##########
     def __del__(self):
         self.p.disconnect()
         time.sleep(1)
-        print(f'[Simulation] Leaving')
+        print(f"[Simulation] Leaving")
 
     ########## Setting up tools ##########
     def setFloorFrictions(self, lateral=1, spinning=-1, rolling=-1):
@@ -242,9 +251,13 @@ class Simulation_base:
             rolling (float) -- rolling friction (default: {-1.0})
         """
         if self.floor is not None:
-            self.p.changeDynamics(self.floor, -1, lateralFriction=lateral,
-                                  spinningFriction=spinning, rollingFriction=rolling)
-
+            self.p.changeDynamics(
+                self.floor,
+                -1,
+                lateralFriction=lateral,
+                spinningFriction=spinning,
+                rollingFriction=rolling,
+            )
 
     def debugCameralookAt(self, target):
         """Make the debug camera loot at a point
@@ -254,8 +267,7 @@ class Simulation_base:
         """
         if self.gui:
             params = self.p.getDebugVisualizerCamera()
-            self.p.resetDebugVisualizerCamera(
-                params[10], params[8], params[9], target)
+            self.p.resetDebugVisualizerCamera(params[10], params[8], params[9], target)
 
     def changeLinkColor(self, jointName, color):
         """Change a link's color and opacity
@@ -264,8 +276,7 @@ class Simulation_base:
             jointName (str) -- the joint name
             color [4 float] -- (r,g,b,a) for RGB and opacity from 0 to 1
         """
-        self.p.changeVisualShape(
-            self.robot, self.jointIds[jointName], rgbaColor=color)
+        self.p.changeVisualShape(self.robot, self.jointIds[jointName], rgbaColor=color)
 
     def resetAllLinkColor(self, color=[1, 1, 1, 1]):
         """Reset all link's color
@@ -281,8 +292,14 @@ class Simulation_base:
         self.lines = []
         self.currentLine = 0
         self.lastLinesDraw = 0
-        self.lineColors = [[1, 0, 0], [0, 1, 0], [
-            0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1]]
+        self.lineColors = [
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 1, 0],
+            [1, 0, 1],
+            [0, 1, 1],
+        ]
 
     def addDebugPosition(self, position, color=None, duration=30):
         """Adds a debug position to be drawn as a line
@@ -300,10 +317,10 @@ class Simulation_base:
         if self.currentLine >= len(self.lines):
             self.lines.append({})
 
-        self.lines[self.currentLine]['update'] = True
-        self.lines[self.currentLine]['to'] = position
-        self.lines[self.currentLine]['color'] = color
-        self.lines[self.currentLine]['duration'] = duration
+        self.lines[self.currentLine]["update"] = True
+        self.lines[self.currentLine]["to"] = position
+        self.lines[self.currentLine]["color"] = color
+        self.lines[self.currentLine]["duration"] = duration
 
         self.currentLine = (self.currentLine + 1) % len(self.lineColors)
 
@@ -312,14 +329,15 @@ class Simulation_base:
         self.currentLine = 0
         if time.time() - self.lastLinesDraw > 0.05:
             for line in self.lines:
-                if 'from' in line:
-                    if line['update'] == True:
+                if "from" in line:
+                    if line["update"] == True:
                         self.p.addUserDebugLine(
-                            line['from'], line['to'], line['color'], 2, line['duration'])
-                        line['update'] = False
+                            line["from"], line["to"], line["color"], 2, line["duration"]
+                        )
+                        line["update"] = False
                     else:
-                        del line['from']
-                line['from'] = line['to']
+                        del line["from"]
+                line["from"] = line["to"]
 
             self.lastLinesDraw = time.time()
 
@@ -332,14 +350,14 @@ class Simulation_base:
         # distance, yaw, pitch, tarPos, clientid(optional if you have multiple clients)
         config = self.getCameraStatus()
         config = config[10], config[8], config[9], config[11]
-        camPos = list(map(lambda x: float(f'{x:.2f}'), config[:3]))
-        camTar = list(map(lambda x: float(f'{x:.2f}'), config[3]))
+        camPos = list(map(lambda x: float(f"{x:.2f}"), config[:3]))
+        camTar = list(map(lambda x: float(f"{x:.2f}"), config[3]))
         return (*camPos, tuple(camTar))
 
     def closeClient(self):
         """Disconnect the Pybullet Simulator"""
         self.p.disconnect()
-        
+
     def autoCollisions(self):
         """Returns the total amount of N in autocollisions (not with ground)
 
@@ -360,10 +378,9 @@ class Simulation_base:
             for j in range(-1, self.noJoints):
                 self.p.setCollisionFilterPair(self.robot, self.robot, i, j, 0)
 
-
     def contactPoints(self):
         """Gets all contact points and forces
-        
+
         Returns:
             list -- list of entries (link_name, position in m, force in N)
         """
@@ -372,10 +389,9 @@ class Simulation_base:
         for contact in contacts:
             link_index = contact[4]
             if link_index >= 0:
-                link_name = (self.p.getJointInfo(
-                    self.robot, link_index)[12]).decode()
+                link_name = (self.p.getJointInfo(self.robot, link_index)[12]).decode()
             else:
-                link_name = 'base'
+                link_name = "base"
             result.append((link_name, contact[6], contact[9]))
 
         return result
@@ -384,16 +400,16 @@ class Simulation_base:
 
     def showJoints(self):
         """Display the details of joionts of the robot"""
-        print('Joints:')
+        print("Joints:")
         for i, j in enumerate(self.joints):
-            print(f'joint {i}: {j}')
+            print(f"joint {i}: {j}")
 
     def getJointInfo(self, jointName):
         """Get informations about a joint
-        
-        Return: list -- 
-            No    Parameter         Type    Description  
-            [0]   jointIndex        int     the same joint index as the input parameter  
+
+        Return: list --
+            No    Parameter         Type    Description
+            [0]   jointIndex        int     the same joint index as the input parameter
             [1]   jointName         string  the name of the joint, as specified in the URDF (or SDF etc) file
             [2]   jointType         int     type of the joint, this also implies the number of position and velocity variables. JOINT_REVOLUTE, JOINT_PRISMATIC, JOINT_SPHERICAL, JOINT_PLANAR, JOINT_FIXED. See the section on Base, Joint and Links for more details.
             [3]   qIndex            int     the first position index in the positional state variables for this body
@@ -427,20 +443,22 @@ class Simulation_base:
 
     def getJointRange(self, jointName):
         """Return the range by given a joint's name"""
-        return self.jointsInfos[jointName]['jointRange']  # TODO: find out this parameter
+        return self.jointsInfos[jointName][
+            "jointRange"
+        ]  # TODO: find out this parameter
 
     def getJointRestPos(self, jointName):
         """Return the rest position by given a joint's name"""
-        return self.jointsInfos[jointName]['restPos']
+        return self.jointsInfos[jointName]["restPos"]
 
     def disableVelocityController(self, jointName):
         """Disable the velocity controller of a joint by given a joint's name
-        
+
         Keyword Arguments:
             jointName (str) -- joint name
-            
+
         Returns:
-            True -- if succeed   
+            True -- if succeed
             False -- else
         """
         if jointName in self.joints:
@@ -449,7 +467,7 @@ class Simulation_base:
                 jointIndex=self.jointIds[jointName],
                 controlMode=self.p.VELOCITY_CONTROL,
                 targetVelocity=0,
-                force=0
+                force=0,
             )
             return True
         else:
@@ -463,13 +481,16 @@ class Simulation_base:
         """
         for jointName in jointPoses:
             self.p.resetJointState(
-                self.robot, self.jointIds[jointName], jointPoses[jointName])
+                self.robot, self.jointIds[jointName], jointPoses[jointName]
+            )
 
     def resetRobot(self):
         """Restore the robot to the default settings (robot position and joints, other internal variables)"""
         # Reset the base pose
         self.setRobotPose(
-            self.robotConfigs["robotStartPos"], self.robotConfigs["robotStartOrientation"])
+            self.robotConfigs["robotStartPos"],
+            self.robotConfigs["robotStartOrientation"],
+        )
         # Reset the joints to 0
         for joint in self.jointIds:
             self.p.resetJointState(self.robot, joint, 0)
@@ -563,7 +584,9 @@ class Simulation_base:
             [10]body type               int                     1=rigid body, 2 = multi body, 3 = soft body
             [11]collision margin        double                  advanced/internal/unsupported info. collision margin of the collision shape. collision margins depend on the shape type, it is not consistent.
         """
-        return self.p.getDynamicsInfo(bodyUniqueId=self.robot, linkIndex=self.jointIds[linkName])
+        return self.p.getDynamicsInfo(
+            bodyUniqueId=self.robot, linkIndex=self.jointIds[linkName]
+        )
 
     def getLinkMass(self, linkName):
         """Keyword Arguments:
@@ -613,7 +636,7 @@ class Simulation_base:
         """
         k = -1
         mass = 0
-        com = np.array([0., 0., 0.])
+        com = np.array([0.0, 0.0, 0.0])
         while True:
             if k == -1:
                 pos, _ = self.p.getBasePositionAndOrientation(self.robot)
@@ -631,5 +654,3 @@ class Simulation_base:
             k += 1
 
         return com / mass
-
-

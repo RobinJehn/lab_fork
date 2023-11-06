@@ -10,16 +10,15 @@ import pybullet_data
 # setup paths and load the core
 abs_path = os.path.dirname(os.path.realpath(__file__))
 root_path = abs_path
-core_path = root_path + '/core'
+core_path = root_path + "/core"
 sys.path.append(core_path)
 from Pybullet_Simulation_base import Simulation_base
 
-from config import NEXTAGE_URDF, USE_PYBULLET_GUI, TABLE_URDF,  OBSTACLE_URDF, CUBE_URDF
+from config import NEXTAGE_URDF, USE_PYBULLET_GUI, TABLE_URDF, OBSTACLE_URDF, CUBE_URDF
 
 from config import ROBOT_PLACEMENT, TABLE_PLACEMENT, OBSTACLE_PLACEMENT, CUBE_PLACEMENT
 from config import DT
 import pinocchio as pin
-
 
 
 pybulletConfigs = {
@@ -32,7 +31,7 @@ pybulletConfigs = {
     "updateFrequency": 250,
     "gravity": -9.81,
     "floor": True,
-    "cameraSettings": (1.2, 90, -22.8, (-0.12, -0.01, 0.99))
+    "cameraSettings": (1.2, 90, -22.8, (-0.12, -0.01, 0.99)),
 }
 
 robotConfigs = {
@@ -40,19 +39,21 @@ robotConfigs = {
     "robotPIDConfigs": core_path + "/PD_gains.yaml",
     "robotStartPos": ROBOT_PLACEMENT.translation,  # (x, y, z)
     "robotStartOrientation": [0, 0, 0, 1],  # (x, y, z, w)
-    "fixedBase": False,        # True | False
-    "colored": False          # True | False
+    "fixedBase": False,  # True | False
+    "colored": False,  # True | False
 }
 
-def load_object(sim,urdf,placement,isFixed):
+
+def load_object(sim, urdf, placement, isFixed):
     placementquat = pin.SE3ToXYZQUAT(placement)
     return sim.p.loadURDF(
-        fileName              = urdf, 
-        basePosition          = placementquat[:3],            
-        baseOrientation       = placementquat[-4:],                                  
-        useFixedBase          = isFixed,             
-        globalScaling         = 1.
+        fileName=urdf,
+        basePosition=placementquat[:3],
+        baseOrientation=placementquat[-4:],
+        useFixedBase=isFixed,
+        globalScaling=1.0,
     )
+
 
 class Simulation(Simulation_base):
     """A Bullet simulation involving Nextage robot"""
@@ -62,17 +63,15 @@ class Simulation(Simulation_base):
         Creates a simulation instance with Nextage robot.
         For the keyword arguments, please see in the Pybullet_Simulation_base.py
         """
-        super().__init__(pybulletConfigs, robotConfigs)        
+        super().__init__(pybulletConfigs, robotConfigs)
         self.readyForSimu = False
-        self.tableId = load_object(self,TABLE_URDF, TABLE_PLACEMENT, True)
-        self.cubeId = load_object(self,CUBE_URDF, CUBE_PLACEMENT, False)
-        self.obstacleId = load_object(self,OBSTACLE_URDF, OBSTACLE_PLACEMENT, True)  
+        self.tableId = load_object(self, TABLE_URDF, TABLE_PLACEMENT, True)
+        self.cubeId = load_object(self, CUBE_URDF, CUBE_PLACEMENT, False)
+        self.obstacleId = load_object(self, OBSTACLE_URDF, OBSTACLE_PLACEMENT, True)
         self.linkpinocchioandbullet(pinocchiorobot)
 
-    
     def linkpinocchioandbullet(self, pinocchiorobot):
-        """maps pinocchio joint ids with pybullet
-        """
+        """maps pinocchio joint ids with pybullet"""
         self.bullet_names2indices = {
             pyb.getJointInfo(1, i)[1].decode(): i for i in range(pyb.getNumJoints(1))
         }
@@ -81,18 +80,15 @@ class Simulation(Simulation_base):
         ]
 
     def getpybulletstate(self):
-        """gets the current q and vq
-        """
+        """gets the current q and vq"""
         # Get articulated joint pos and vel
         xbullet = pyb.getJointStates(self.robot, self.bulletCtrlJointsInPinOrder)
         q = np.array([x[0] for x in xbullet])
         vq = np.array([x[1] for x in xbullet])
         return q, vq
-    
 
     def setqsim(self, q):
-        """sets the current q
-        """
+        """sets the current q"""
         for i, qi in zip(self.bulletCtrlJointsInPinOrder, q):
             self.p.resetJointState(bodyUniqueId=1, jointIndex=i, targetValue=qi)
 
@@ -108,8 +104,8 @@ class Simulation(Simulation_base):
             forces=[0.0 for _ in self.bulletCtrlJointsInPinOrder],
         )
         self.readyForSimu = True
-        
-    def step(self, torques = None):
+
+    def step(self, torques=None):
         """
         Advances the simulation by DT, inputing the torques passed as parameters
         """
@@ -124,11 +120,9 @@ class Simulation(Simulation_base):
         )
         pyb.stepSimulation()
 
-        
-    
 
 def setuppybullet(pinocchiorobot):
-    sim = Simulation(pinocchiorobot)    
+    sim = Simulation(pinocchiorobot)
     pyb.setTimeStep(DT)
     return sim
 
@@ -137,22 +131,19 @@ def setuppybullet(pinocchiorobot):
 ################################################################################
 
 
-
-
-
 if __name__ == "__main__":
-    
+
     from tools import setupwithmeshcat
+
     robot, cube, viz = setupwithmeshcat()
     sim = setuppybullet(robot)
-    
+
     sim.setTorqueControlMode()
-    
+
     # #set pin config to pybullet
     # q = pin.randomConfiguration(robot.model)
     # viz.display(q)
     # setqsim(sim,q)
-    
+
     # qsim, vqsim = getpybulletstate(sim)
     # print(np.linalg.norm(q - qsim))
-    

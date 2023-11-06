@@ -56,7 +56,7 @@ def finalisecollisionsetup(robot):
     # Remove collision pairs per SRDF
     pin.removeCollisionPairs(robot.model, robot.collision_model, NEXTAGE_SRDF, False)
     robot.collision_data = pin.GeometryData(robot.collision_model)
-    robot.visual_data    = pin.GeometryData(robot.visual_model   )
+    robot.visual_data    = pin.GeometryData(robot.visual_model)
         
 def addcubecollision(cube, obstacle):
     for obs in obstacle.collision_model.geometryObjects:
@@ -64,7 +64,8 @@ def addcubecollision(cube, obstacle):
     
 def finalisecubecollisionsetup(cube):
     cube.collision_model.addAllCollisionPairs()   
-    cube.collision_model.addCollisionPair(pin.CollisionPair(0,1))
+    cube.collision_model.addCollisionPair(pin.CollisionPair(0, 1))
+    # cube.collision_model.addCollisionPair(pin.CollisionPair(0, 2))
     cube.collision_data = cube.collision_model.createData()
     
 

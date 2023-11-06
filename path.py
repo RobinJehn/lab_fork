@@ -19,15 +19,15 @@ import time
 
 #returns a collision free path from qinit to qgoal under grasping constraints
 #the path is expressed as a list of configurations
-def computepath(qinit,qgoal,cubeplacementq0, cubeplacementqgoal, robot):
+def computepath(qinit,qgoal,cubeplacementq0, cubeplacementqgoal, robot, cube):
     rrt = RRT_CONNECT(Node(cubeplacementq0.translation, None, qinit), Node(cubeplacementqgoal.translation, None, qgoal))
-    path = rrt.plan(collision_f(robot, qinit), 0.01, 1000, sampleCubePlacements, False)
+    path = rrt.plan(collision_f(robot, qinit, cube), 0.01, 1000, sampleCubePlacements, True)
     se3_path = list(map(lambda n: pin.SE3(rotate('z', 0.), n.position),  path))
     q_path = np.array(list(map(lambda cube_placement: computeqgrasppose(robot, qinit, cube, cube_placement)[0],  se3_path)))
     
     return q_path, se3_path
 
-def collision_f(robot, q_current):
+def collision_f(robot, q_current, cube):
     def f(node: Node) -> bool:
         cube_placement = pin.SE3(rotate('z', 0.), node.position)
         q_init = node.parent.q if node.parent is not None and node.parent.q is not None else q_current
@@ -75,6 +75,6 @@ if __name__ == "__main__":
     if not(successinit and successend):
         print ("error: invalid initial or end configuration")
     
-    q_path, se3_path = computepath(q0,qe,CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET, robot)
+    q_path, se3_path = computepath(q0,qe,CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET, robot, cube)
     displaypath(robot, q_path, se3_path, dt=0.2, viz=viz) #you ll probably want to lower dt
     

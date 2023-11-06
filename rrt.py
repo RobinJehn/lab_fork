@@ -149,8 +149,9 @@ class RRT_CONNECT:
         return s
 
     def plan(self, collision_f: callable, step_size: float = 0.1, max_iter: int = 1000, rand_f: callable = None, vis = False) -> list[Node]:
-        plt.ion()
-        plt.show()
+        if vis:
+            plt.ion()
+            plt.show()
         for k in range(max_iter):
             tree_1 = self.tree_a if k % 2 == 0 else self.tree_b
             tree_2 = self.tree_b if k % 2 == 0 else self.tree_a

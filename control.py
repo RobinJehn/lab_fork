@@ -7,17 +7,21 @@ Created on Wed Sep  6 15:32:51 2023
 """
 
 import numpy as np
-
+import pinocchio as pin
 from bezier import Bezier
-import pinocchio as pin  # the pinocchio library
 from config import LEFT_HAND, RIGHT_HAND
+from tools import setupwithpybullet, rununtil
+from config import DT
+from config import CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET
+from inverse_geometry import computeqgrasppose
+from path import computepath
 
 # in my solution these gains were good enough for all joints but you might want to tune this.
 Kp = 300.0  # proportional gain (P of PD)
 Kv = 2 * np.sqrt(Kp)  # derivative gain (D of PD)
 
 
-def controllaw(sim, robot, trajs, tcurrent, cube):
+def controllaw(sim, robot, trajs, tcurrent):
     q, vq = sim.getpybulletstate()
 
     ref_q = trajs[0](tcurrent)
@@ -53,16 +57,15 @@ def controllaw(sim, robot, trajs, tcurrent, cube):
     sim.step(torques)
 
 
+def maketraj(path, T):
+    q_of_t = Bezier(path, t_max=T)
+    vq_of_t = q_of_t.derivative(1)
+    vvq_of_t = vq_of_t.derivative(1)
+    return q_of_t, vq_of_t, vvq_of_t
+
+
 if __name__ == "__main__":
-    from tools import setupwithpybullet, setupwithpybulletandmeshcat, rununtil
-    from config import DT
-
     robot, sim, cube = setupwithpybullet()
-
-    from config import CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET
-    from inverse_geometry import computeqgrasppose
-    from path import computepath
-
     q0, successinit = computeqgrasppose(robot, robot.q0, cube, CUBE_PLACEMENT, None)
     qe, successend = computeqgrasppose(
         robot, robot.q0, cube, CUBE_PLACEMENT_TARGET, None
@@ -74,17 +77,10 @@ if __name__ == "__main__":
     # setting initial configuration
     sim.setqsim(q0)
 
-    def maketraj(path, T):
-        q_of_t = Bezier(path, t_max=T)
-        vq_of_t = q_of_t.derivative(1)
-        vvq_of_t = vq_of_t.derivative(1)
-        return q_of_t, vq_of_t, vvq_of_t
-
     total_time = 4.0
     trajs = maketraj(q_path, total_time)
 
     tcur = 0.0
-
     while tcur < total_time:
-        rununtil(controllaw, DT, sim, robot, trajs, tcur, cube)
+        rununtil(controllaw, DT, sim, robot, trajs, tcur)
         tcur += DT

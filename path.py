@@ -33,7 +33,18 @@ def collision_f(robot, q_current, cube):
         q_init = node.parent.q if node.parent is not None and node.parent.q is not None else q_current
         q, sucess = computeqgrasppose(robot, q_init, cube, cube_placement)
         node.q = q
-        return not sucess
+
+        # cube_size = [0.1, 0.1, 0.1]
+        # obstacle_size = [0.3, 0.03, 0.12]
+        # obstacle_pos = [0.43, -0.1, 0.94]
+        # cube_pos = node.position
+
+        # potential_x_collision = abs(obstacle_pos[0] - cube_pos[0]) < (cube_size[0] + obstacle_size[0]) / 2
+        # potential_y_collision = abs(obstacle_pos[1] - cube_pos[1]) < (cube_size[1] + obstacle_size[1]) / 2
+        # potential_z_collision = abs(obstacle_pos[2] - cube_pos[2]) < (cube_size[2] + obstacle_size[2]) / 2
+        # manual_collision_check = potential_x_collision and potential_y_collision and potential_z_collision
+
+        return not sucess # or manual_collision_check
     return f
 
 def displaypath(robot,robot_path, cube_path, dt,viz):

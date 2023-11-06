@@ -9,6 +9,8 @@ Created on Wed Sep  6 15:32:51 2023
 import numpy as np
 
 from bezier import Bezier
+import pinocchio as pin # the pinocchio library
+from config import LEFT_HAND, RIGHT_HAND
     
 # in my solution these gains were good enough for all joints but you might want to tune this.
 Kp = 300.               # proportional gain (P of PD)
@@ -16,12 +18,36 @@ Kv = 2 * np.sqrt(Kp)   # derivative gain (D of PD)
 
 def controllaw(sim, robot, trajs, tcurrent, cube):
     q, vq = sim.getpybulletstate()
-    #TODO 
-    torques = [0.0 for _ in sim.bulletCtrlJointsInPinOrder]
+
+    ref_q = trajs[0](tcurrent)
+    ref_vq = trajs[1](tcurrent)
+    ref_vvq = trajs[2](tcurrent)
+
+    # These are vectors
+    dq = q - ref_q
+    dvq = vq - ref_vq
+
+    b = pin.rnea(robot.model, robot.data, q, vq, ref_vvq)
+    # compute mass matrix M
+    M = pin.crba(robot.model, robot.data, q)
+
+    pin.framesForwardKinematics(robot.model,robot.data,q)
+    pin.computeJointJacobians(robot.model,robot.data,q)
+
+    LEFT_HAND_ID = robot.model.getFrameId(LEFT_HAND)
+    o_Jleft = pin.computeFrameJacobian(robot.model, robot.data, q, LEFT_HAND_ID, pin.LOCAL)
+
+    RIGHT_HAND_ID = robot.model.getFrameId(RIGHT_HAND)
+    o_Jright = pin.computeFrameJacobian(robot.model, robot.data, q, RIGHT_HAND_ID, pin.LOCAL)
+
+    f_c = np.array([0, -50, 30, 0, 0, 0])
+    
+    desired_vvq = ref_vvq - Kp * dq - Kv * dvq
+    torques = M @ desired_vvq + b + (o_Jleft.T + o_Jright.T) @ f_c
+
     sim.step(torques)
 
 if __name__ == "__main__":
-        
     from tools import setupwithpybullet, setupwithpybulletandmeshcat, rununtil
     from config import DT
     
@@ -34,29 +60,22 @@ if __name__ == "__main__":
     
     q0,successinit = computeqgrasppose(robot, robot.q0, cube, CUBE_PLACEMENT, None)
     qe,successend = computeqgrasppose(robot, robot.q0, cube, CUBE_PLACEMENT_TARGET,  None)
-    path = computepath(q0,qe,CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET)
-
+    q_path, se3_path = computepath(q0, qe, CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET, robot, cube)
     
     #setting initial configuration
     sim.setqsim(q0)
-    
-    
-    #TODO this is just an example, you are free to do as you please.
-    #In any case this trajectory does not follow the path 
-    #0 init and end velocities
-    def maketraj(q0,q1,T): #TODO compute a real trajectory !
-        q_of_t = Bezier([q0,q0,q1,q1],t_max=T)
+
+
+    def maketraj(path, T):
+        q_of_t = Bezier(path, t_max=T)
         vq_of_t = q_of_t.derivative(1)
         vvq_of_t = vq_of_t.derivative(1)
         return q_of_t, vq_of_t, vvq_of_t
     
-    
-    #TODO this is just a random trajectory, you need to do this yourself
     total_time=4.
-    trajs = maketraj(q0, qe, total_time)   
+    trajs = maketraj(q_path, total_time)   
     
     tcur = 0.
-    
     
     while tcur < total_time:
         rununtil(controllaw, DT, sim, robot, trajs, tcur, cube)

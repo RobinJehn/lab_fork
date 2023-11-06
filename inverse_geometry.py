@@ -17,7 +17,7 @@ import time
 
 from tools import setcubeplacement
 
-DT = 1e-2
+DT = 1e-1 # 1e-2
 
 # Still coliding maybe move left and right hands
 def computeqgrasppose(robot: RobotWrapper, qcurrent, cube: RobotWrapper, cubetarget, viz=None):

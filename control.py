@@ -15,10 +15,70 @@ from config import DT
 from config import CUBE_PLACEMENT, CUBE_PLACEMENT_TARGET
 from inverse_geometry import computeqgrasppose
 from path import computepath
+from config import LEFT_HAND
+import matplotlib.pyplot as plt
 
 # in my solution these gains were good enough for all joints but you might want to tune this.
 Kp = 300.0  # proportional gain (P of PD)
 Kv = 2 * np.sqrt(Kp)  # derivative gain (D of PD)
+
+
+def plot_bezier_diff(trajs, path, total_time):
+    LEFT_HAND_ID = robot.model.getFrameId(LEFT_HAND)
+
+    def get_xyz_from_q(q, frame_id):
+        pin.framesForwardKinematics(robot.model, robot.data, q)
+        pin.forwardKinematics(robot.model, robot.data, q)
+        return robot.data.oMf[frame_id].translation.copy()
+
+    world_goal_traj_left = np.array([get_xyz_from_q(q, LEFT_HAND_ID) for q in path])
+    world_bezier_traj_left = np.array(
+        [
+            get_xyz_from_q(trajs[0](t), LEFT_HAND_ID)
+            for t in np.linspace(0, total_time, 65)
+        ]
+    )
+    # Plot them 3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    ax.plot(
+        world_goal_traj_left[:, 0],
+        world_goal_traj_left[:, 1],
+        world_goal_traj_left[:, 2],
+        label="Goal (L)",
+        color="red",
+    )
+    ax.plot(
+        world_bezier_traj_left[:, 0],
+        world_bezier_traj_left[:, 1],
+        world_bezier_traj_left[:, 2],
+        label="Bezier (L)",
+        color="blue",
+    )
+    ax.set_xlabel("X Label")
+    ax.set_ylabel("Y Label")
+    ax.set_zlabel("Z Label")
+    ax.legend()
+    plt.show()
+
+
+def calculate_curve_diff(trajs, path):
+    LEFT_HAND_ID = robot.model.getFrameId(LEFT_HAND)
+
+    def get_xyz_from_q(q, frame_id):
+        pin.framesForwardKinematics(robot.model, robot.data, q)
+        pin.forwardKinematics(robot.model, robot.data, q)
+        return robot.data.oMf[frame_id].translation.copy()
+
+    world_goal_traj_left = np.array([get_xyz_from_q(q, LEFT_HAND_ID) for q in path])
+    world_bezier_traj_left = np.array(
+        [
+            get_xyz_from_q(trajs[0](t), LEFT_HAND_ID)
+            for t in np.linspace(0, total_time, len(path))
+        ]
+    )
+
+    np.linalg.norm(world_goal_traj_left - world_bezier_traj_left)
 
 
 def controllaw(sim, robot, trajs, tcurrent):
@@ -79,6 +139,8 @@ if __name__ == "__main__":
 
     total_time = 4.0
     trajs = maketraj(q_path, total_time)
+
+    plot_bezier_diff(trajs, q_path, total_time)
 
     tcur = 0.0
     while tcur < total_time:

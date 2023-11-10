@@ -34,7 +34,7 @@ class Node:
 
     def step(self, target: Node, epsilon, collision_f: callable) -> Node:
         if self.distance(target) < epsilon:
-            new_node = target
+            new_node = Node(target.position, self)
         else:
             dir = target.position - self.position
             dir = dir / np.linalg.norm(dir) * epsilon  # Make dir length epsilon
@@ -128,13 +128,18 @@ class RRT_CONNECT:
         self.tree_a.add_node(self.start)
         self.tree_b = Tree()
         self.tree_b.add_node(self.goal)
-        self.ax = plt.figure().add_subplot(projection="3d")
+        self.vis_3d = vis_3d
+        self.ax = (
+            plt.figure().add_subplot(projection="3d")
+            if self.vis_3d
+            else plt.figure().add_subplot()
+        )
 
     @staticmethod
     def extend(tree: Tree, q: Node, collision_f: callable, step_size: float = 0.1):
         q_near = tree.nearestNeighbor(q)
         q_new = q_near.step(q, step_size, collision_f)
-        if q_new is q:
+        if q_new is not None and np.all(q_new.position == q.position):
             tree.add_node(q_new)
             tree.add_edge(q_new, q_near)
             state = "Reached"

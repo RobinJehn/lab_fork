@@ -6,8 +6,11 @@ Created on Mon Sep  4 11:09:02 2023
 @author: stonneau
 """
 
-from utils.meshcat_viewer_wrapper import MeshcatVisualizer  # the meshcat visualiser
 import sys
+import numpy as np
+from utils.meshcat_viewer_wrapper import MeshcatVisualizer  # the meshcat visualiser
+from tools import getcubeplacement
+from pinocchio.robot_wrapper import RobotWrapper
 from config import (
     USE_MESHCAT,
     MESHCAT_URL,
@@ -15,7 +18,6 @@ from config import (
     RIGHT_HAND,
     CUBE_PLACEMENT_TARGET,
 )
-from tools import getcubeplacement
 
 
 FRAME_NAMES = [
@@ -28,28 +30,28 @@ hook_frames_names_meshcat = [LEFT_HAND + "HookFrame", RIGHT_HAND + "HookFrame"]
 hook_frames_names = ["LARM_HOOK", "RARM_HOOK"]
 
 
-def addframes(viz):
+def addframes(viz: MeshcatVisualizer):
     for framename in FRAME_NAMES:
         viz.addFrame(framename, 0.2)
     for framename in hook_frames_names_meshcat:
         viz.addFrame(framename, 0.2)
 
 
-def updaterobotframes(viz, robot):
+def updaterobotframes(viz: MeshcatVisualizer, robot: RobotWrapper):
     for jointname, framename in zip(FRAME_JOINT_NAMES, FRAME_NAMES):
         frameid = robot.model.getFrameId(jointname)
         oMframe = robot.data.oMf[frameid]
         viz.applyConfiguration(framename, oMframe)
 
 
-def updatecubeframes(viz, cube):
+def updatecubeframes(viz: MeshcatVisualizer, cube: RobotWrapper):
     for hookframename, framenamemeshcat in zip(
         hook_frames_names, hook_frames_names_meshcat
     ):
         viz.applyConfiguration(framenamemeshcat, getcubeplacement(cube, hookframename))
 
 
-def setupmeshcat(robot, url=MESHCAT_URL):
+def setupmeshcat(robot: RobotWrapper, url: str = MESHCAT_URL) -> MeshcatVisualizer:
     if USE_MESHCAT:
         viz = MeshcatVisualizer(robot, url=url)
         # add target
@@ -66,7 +68,9 @@ def setupmeshcat(robot, url=MESHCAT_URL):
         sys.exit(0)
 
 
-def updatevisuals(viz, robot, cube, q):
+def updatevisuals(
+    viz: MeshcatVisualizer, robot: RobotWrapper, cube: RobotWrapper, q: np.ndarray
+):
     updaterobotframes(viz, robot)
     updatecubeframes(viz, cube)
     viz.display(q)

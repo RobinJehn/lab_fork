@@ -1,11 +1,11 @@
-import subprocess
-import math
-import time
 import sys
 import os
 import numpy as np
 import pybullet as pyb
 import pybullet_data
+import pinocchio as pin
+from pinocchio.robot_wrapper import RobotWrapper
+from typing import List
 
 # setup paths and load the core
 abs_path = os.path.dirname(os.path.realpath(__file__))
@@ -15,10 +15,8 @@ sys.path.append(core_path)
 from Pybullet_Simulation_base import Simulation_base
 
 from config import NEXTAGE_URDF, USE_PYBULLET_GUI, TABLE_URDF, OBSTACLE_URDF, CUBE_URDF
-
 from config import ROBOT_PLACEMENT, TABLE_PLACEMENT, OBSTACLE_PLACEMENT, CUBE_PLACEMENT
 from config import DT
-import pinocchio as pin
 
 
 pybulletConfigs = {
@@ -44,21 +42,10 @@ robotConfigs = {
 }
 
 
-def load_object(sim, urdf, placement, isFixed):
-    placementquat = pin.SE3ToXYZQUAT(placement)
-    return sim.p.loadURDF(
-        fileName=urdf,
-        basePosition=placementquat[:3],
-        baseOrientation=placementquat[-4:],
-        useFixedBase=isFixed,
-        globalScaling=1.0,
-    )
-
-
 class Simulation(Simulation_base):
     """A Bullet simulation involving Nextage robot"""
 
-    def __init__(self, pinocchiorobot):
+    def __init__(self, pinocchiorobot: RobotWrapper):
         """Constructor
         Creates a simulation instance with Nextage robot.
         For the keyword arguments, please see in the Pybullet_Simulation_base.py
@@ -70,7 +57,7 @@ class Simulation(Simulation_base):
         self.obstacleId = load_object(self, OBSTACLE_URDF, OBSTACLE_PLACEMENT, True)
         self.linkpinocchioandbullet(pinocchiorobot)
 
-    def linkpinocchioandbullet(self, pinocchiorobot):
+    def linkpinocchioandbullet(self, pinocchiorobot: RobotWrapper):
         """maps pinocchio joint ids with pybullet"""
         self.bullet_names2indices = {
             pyb.getJointInfo(1, i)[1].decode(): i for i in range(pyb.getNumJoints(1))
@@ -87,7 +74,7 @@ class Simulation(Simulation_base):
         vq = np.array([x[1] for x in xbullet])
         return q, vq
 
-    def setqsim(self, q):
+    def setqsim(self, q: np.ndarray):
         """sets the current q"""
         for i, qi in zip(self.bulletCtrlJointsInPinOrder, q):
             self.p.resetJointState(bodyUniqueId=1, jointIndex=i, targetValue=qi)
@@ -105,7 +92,7 @@ class Simulation(Simulation_base):
         )
         self.readyForSimu = True
 
-    def step(self, torques=None):
+    def step(self, torques: List[float] = None):
         """
         Advances the simulation by DT, inputing the torques passed as parameters
         """
@@ -121,7 +108,20 @@ class Simulation(Simulation_base):
         pyb.stepSimulation()
 
 
-def setuppybullet(pinocchiorobot):
+def load_object(
+    sim: Simulation, urdf: str, placement: pin.SE3, isFixed: bool
+) -> RobotWrapper:
+    placementquat = pin.SE3ToXYZQUAT(placement)
+    return sim.p.loadURDF(
+        fileName=urdf,
+        basePosition=placementquat[:3],
+        baseOrientation=placementquat[-4:],
+        useFixedBase=isFixed,
+        globalScaling=1.0,
+    )
+
+
+def setuppybullet(pinocchiorobot: RobotWrapper) -> Simulation:
     sim = Simulation(pinocchiorobot)
     pyb.setTimeStep(DT)
     return sim
@@ -132,7 +132,6 @@ def setuppybullet(pinocchiorobot):
 
 
 if __name__ == "__main__":
-
     from tools import setupwithmeshcat
 
     robot, cube, viz = setupwithmeshcat()

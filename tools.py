@@ -8,26 +8,30 @@ Created on Wed Sep  6 15:32:51 2023
 
 import pinocchio as pin  # the pinocchio library
 import numpy as np
+import time
+from typing import Tuple
+from pinocchio.robot_wrapper import RobotWrapper
+from utils.meshcat_viewer_wrapper import MeshcatVisualizer  # the meshcat visualiser
 
 
-def jointlimitscost(robot, q):
+def jointlimitscost(robot: RobotWrapper, q: np.ndarray) -> float:
     up = max(q - robot.model.upperPositionLimit)
     down = max(robot.model.lowerPositionLimit - q)
     return max(0, max(up, down))
 
 
-def jointlimitsviolated(robot, q):
+def jointlimitsviolated(robot: RobotWrapper, q: np.ndarray) -> float:
     """Return true if config not in joint limits"""
     return jointlimitscost(robot, q) > 0.0
 
 
-def projecttojointlimits(robot, q):
+def projecttojointlimits(robot: RobotWrapper, q: np.ndarray) -> float:
     return np.minimum(
         np.maximum(robot.model.lowerPositionLimit, q), robot.model.upperPositionLimit
     )
 
 
-def collision(robot, q):
+def collision(robot: RobotWrapper, q: np.ndarray) -> bool:
     """Return true if in collision, false otherwise."""
     pin.updateGeometryPlacements(
         robot.model, robot.data, robot.collision_model, robot.collision_data, q
@@ -42,7 +46,7 @@ def collision(robot, q):
     return pin.computeCollisions(robot.collision_model, robot.collision_data, False)
 
 
-def distanceToObstacle(robot, q):
+def distanceToObstacle(robot: RobotWrapper, q: np.ndarray) -> float:
     """Return the shortest distance between robot and the obstacle."""
     geomidobs = robot.collision_model.getGeometryId("obstaclebase_0")
     geomidtable = robot.collision_model.getGeometryId("baseLink_0")
@@ -70,7 +74,7 @@ def distanceToObstacle(robot, q):
     return min(dists)
 
 
-def getcubeplacement(cube, hookname=None):
+def getcubeplacement(cube: RobotWrapper, hookname: str = None) -> pin.SE3:
     oMf = cube.collision_model.geometryObjects[0].placement
     if hookname is not None:
         frameid = cube.model.getFrameId(hookname)
@@ -78,7 +82,7 @@ def getcubeplacement(cube, hookname=None):
     return oMf
 
 
-def setcubeplacement(robot, cube, oMf):
+def setcubeplacement(robot: RobotWrapper, cube: RobotWrapper, oMf: pin.SE3):
     q = cube.q0
     robot.visual_model.geometryObjects[-1].placement = oMf
     robot.collision_model.geometryObjects[-1].placement = oMf
@@ -91,40 +95,36 @@ def setcubeplacement(robot, cube, oMf):
 
 from setup_pinocchio import setuppinocchio
 from setup_meshcat import setupmeshcat
-from config import MESHCAT_URL
+from setup_pybullet import setuppybullet, Simulation
 
 
-def setupwithmeshcat(url=MESHCAT_URL):
+def setupwithmeshcat() -> Tuple[RobotWrapper, RobotWrapper, Simulation]:
     """setups everything to work with the robot and meshcat"""
-    robot, table, obstacle, cube = setuppinocchio()
+    robot, _, _, cube = setuppinocchio()
     viz = setupmeshcat(robot)
     return robot, cube, viz
 
 
-from setup_pybullet import setuppybullet
-
-
-def setupwithpybullet():
+def setupwithpybullet() -> Tuple[RobotWrapper, Simulation, RobotWrapper]:
     """setups everything to work with the robot and pybullet"""
-    robot, table, obstacle, cube = setuppinocchio()
+    robot, _, _, cube = setuppinocchio()
     sim = setuppybullet(robot)
     sim.setTorqueControlMode()
     return robot, sim, cube
 
 
-def setupwithpybulletandmeshcat(url=MESHCAT_URL):
+def setupwithpybulletandmeshcat() -> (
+    Tuple[RobotWrapper, Simulation, RobotWrapper, MeshcatVisualizer]
+):
     """setups everything to work with the robot, pybullet AND meshcat"""
-    robot, table, obstacle, cube = setuppinocchio()
+    robot, _, _, cube = setuppinocchio()
     viz = setupmeshcat(robot)
     sim = setuppybullet(robot)
     sim.setTorqueControlMode()
     return robot, sim, cube, viz
 
 
-import time
-
-
-def rununtil(f, t, *args, **kwargs):
+def rununtil(f: callable, t, *args, **kwargs):
     """starts a timer, runs a function f then waits until t seconds have passed since timer started"""
     t = time.perf_counter()
     # Call the provided function f2 with its arguments

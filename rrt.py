@@ -1,26 +1,7 @@
 from __future__ import annotations
-from typing import Iterator
+from typing import Iterator, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
-from astar import AStar
-
-
-class BasicAStar(AStar):
-    def __init__(self, tree: Tree):
-        self.tree = tree
-
-    def neighbors(self, n: Node) -> Iterator[Node]:
-        for node in self.tree.edges[n]:
-            yield node
-
-    def distance_between(self, n1: Node, n2: Node) -> float:
-        return n1.distance(n2)
-
-    def heuristic_cost_estimate(self, current: Node, goal: Node) -> float:
-        return current.distance(goal)
-
-    def is_goal_reached(self, current: Node, goal: Node) -> bool:
-        return current == goal
 
 
 class Node:
@@ -54,6 +35,12 @@ class Node:
 
     def __str__(self):
         return str(self.position)
+
+    def path_to_root(self) -> list[Node]:
+        if self.parent is None:
+            return [self]
+        else:
+            return [self] + self.parent.path_to_root()
 
 
 class Tree:
@@ -133,10 +120,10 @@ class RRT_CONNECT:
         self.goal = goal
         self.path = []
         # Creating the trees
-        self.tree_a = Tree()
-        self.tree_a.add_node(self.start)
-        self.tree_b = Tree()
-        self.tree_b.add_node(self.goal)
+        self.tree_start = Tree()
+        self.tree_start.add_node(self.start)
+        self.tree_end = Tree()
+        self.tree_end.add_node(self.goal)
         self.vis_3d = vis_3d
         self.ax = (
             plt.figure().add_subplot(projection="3d")
@@ -161,11 +148,13 @@ class RRT_CONNECT:
         return q_new, state
 
     @staticmethod
-    def connect(tree: Tree, q: Node, collision_f: callable, step_size: float) -> str:
-        _, s = RRT_CONNECT.extend(tree, q, collision_f, step_size)
+    def connect(
+        tree: Tree, q: Node, collision_f: callable, step_size: float
+    ) -> Tuple[Node, str]:
+        q_new, s = RRT_CONNECT.extend(tree, q, collision_f, step_size)
         while s == "Advanced":
-            _, s = RRT_CONNECT.extend(tree, q, collision_f, step_size)
-        return s
+            q_new, s = RRT_CONNECT.extend(tree, q, collision_f, step_size)
+        return q_new, s
 
     def plan(
         self,
@@ -179,18 +168,23 @@ class RRT_CONNECT:
             plt.ion()
             plt.show()
         for k in range(max_iter):
-            tree_1 = self.tree_a if k % 2 == 0 else self.tree_b
-            tree_2 = self.tree_b if k % 2 == 0 else self.tree_a
+            tree_1 = self.tree_start if k % 2 == 0 else self.tree_end
+            tree_2 = self.tree_end if k % 2 == 0 else self.tree_start
             extend_start = k % 2 == 0
             q_rand = rand_f(extend_start)
-            q_new, state = RRT_CONNECT.extend(tree_1, q_rand, collision_f, step_size)
-            if not state == "Trapped":
-                if self.connect(tree_2, q_new, collision_f, step_size) == "Reached":
-                    # Which tree does q_new belong to? tree1
+            q_new_1, state_1 = RRT_CONNECT.extend(
+                tree_1, q_rand, collision_f, step_size
+            )
+            if not state_1 == "Trapped":
+                q_new_2, state_2 = self.connect(tree_2, q_new_1, collision_f, step_size)
+                if state_2 == "Reached":
+                    path_1 = q_new_1.path_to_root()
+                    path_2 = q_new_2.path_to_root()
+                    if k % 2 == 0:  # path is from tree_start, path_2 from tree_end
+                        self.path = list(reversed(path_1)) + path_2
+                    else:  # path is from tree_end, path_2 from tree_start
+                        self.path = list(reversed(path_2)) + path_1
 
-                    full_tree = Tree.combine(self.tree_a, self.tree_b)
-                    astar = BasicAStar(full_tree)
-                    self.path = list(astar.astar(self.start, self.goal))
                     if vis:
                         self.plot()
                         plt.pause(5)
@@ -201,16 +195,16 @@ class RRT_CONNECT:
         return self.path
 
     def plot(self, vis_path: bool = False) -> None:
-        self.tree_a.plot(self.ax, self.vis_3d)
-        self.tree_b.plot(self.ax, self.vis_3d)
+        self.tree_start.plot(self.ax, self.vis_3d)
+        self.tree_end.plot(self.ax, self.vis_3d)
         if vis_path:
             path = np.array(list(map(lambda n: n.position, self.path)))
             if self.vis_3d:
                 self.ax.plot(path[:, 0], path[:, 1], path[:, 2], "ro-")
             else:
                 self.ax.plot(path[:, 0], path[:, 1], "ro-")
-        print(len(self.tree_a.nodes))
-        print(len(self.tree_b.nodes))
+        print(len(self.tree_start.nodes))
+        print(len(self.tree_end.nodes))
         plt.draw()
         plt.pause(0.1)
 

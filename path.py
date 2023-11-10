@@ -83,7 +83,7 @@ def sampleCubePlacements(start: bool) -> Node:
     # zrange = (1.1, 1.2)
     # yrange = (-0.3, 0.1)
     xrange = (0.3, 0.5)
-    zrange = (1.06 - 0.12, 1.2 - 0.12)
+    zrange = (1.06, 1.2)
     if start:
         yrange = (-0.3, -0.3)
     else:
